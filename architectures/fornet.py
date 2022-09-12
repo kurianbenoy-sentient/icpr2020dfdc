@@ -26,6 +26,7 @@ Feature Extractor
 
 model_dir = os.environ.get("MODEL_DIR")
 
+
 class FeatureExtractor(nn.Module):
     """
     Abstract class to be extended when supporting features extraction.
@@ -40,7 +41,9 @@ class FeatureExtractor(nn.Module):
 
     @staticmethod
     def get_normalizer():
-        return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        return transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        )
 
 
 """
@@ -70,7 +73,7 @@ class EfficientNetGen(FeatureExtractor):
 
 class EfficientNetB4(EfficientNetGen):
     def __init__(self):
-        super(EfficientNetB4, self).__init__(model='efficientnet-b4')
+        super(EfficientNetB4, self).__init__(model="efficientnet-b4")
 
 
 """
@@ -86,7 +89,7 @@ class EfficientNetAutoAtt(EfficientNet):
         :param depth: attention width
         :return:
         """
-        if model == 'efficientnet-b4':
+        if model == "efficientnet-b4":
             self.att_block_idx = 9
             if width == 0:
                 self.attconv = nn.Conv2d(kernel_size=1, in_channels=56, out_channels=1)
@@ -94,13 +97,26 @@ class EfficientNetAutoAtt(EfficientNet):
                 attconv_layers = []
                 for i in range(width):
                     attconv_layers.append(
-                        ('conv{:d}'.format(i), nn.Conv2d(kernel_size=3, padding=1, in_channels=56, out_channels=56)))
-                    attconv_layers.append(
-                        ('relu{:d}'.format(i), nn.ReLU(inplace=True)))
-                attconv_layers.append(('conv_out', nn.Conv2d(kernel_size=1, in_channels=56, out_channels=1)))
+                        (
+                            "conv{:d}".format(i),
+                            nn.Conv2d(
+                                kernel_size=3,
+                                padding=1,
+                                in_channels=56,
+                                out_channels=56,
+                            ),
+                        )
+                    )
+                    attconv_layers.append(("relu{:d}".format(i), nn.ReLU(inplace=True)))
+                attconv_layers.append(
+                    (
+                        "conv_out",
+                        nn.Conv2d(kernel_size=1, in_channels=56, out_channels=1),
+                    )
+                )
                 self.attconv = nn.Sequential(OrderedDict(attconv_layers))
         else:
-            raise ValueError('Model not valid: {}'.format(model))
+            raise ValueError("Model not valid: {}".format(model))
 
     def get_attention(self, x: torch.Tensor) -> torch.Tensor:
 
@@ -145,7 +161,9 @@ class EfficientNetAutoAtt(EfficientNet):
 class EfficientNetGenAutoAtt(FeatureExtractor):
     def __init__(self, model: str, width: int):
         super(EfficientNetGenAutoAtt, self).__init__()
-        self.efficientnet = EfficientNetAutoAtt.from_pretrained(model, weights_path=os.path.join(model_dir,"efficientnet-b4-6ed6700e.pth"))
+        self.efficientnet = EfficientNetAutoAtt.from_pretrained(
+            model, weights_path=os.path.join(model_dir, "efficientnet-b4-6ed6700e.pth")
+        )
         self.efficientnet.init_att(model, width)
         self.classifier = nn.Linear(self.efficientnet._conv_head.out_channels, 1)
         del self.efficientnet._fc
@@ -168,7 +186,7 @@ class EfficientNetGenAutoAtt(FeatureExtractor):
 
 class EfficientNetAutoAttB4(EfficientNetGenAutoAtt):
     def __init__(self):
-        super(EfficientNetAutoAttB4, self).__init__(model='efficientnet-b4', width=0)
+        super(EfficientNetAutoAttB4, self).__init__(model="efficientnet-b4", width=0)
 
 
 """
@@ -199,11 +217,15 @@ Siamese tuning
 
 
 class SiameseTuning(FeatureExtractor):
-    def __init__(self, feat_ext: FeatureExtractor, num_feat: int, lastonly: bool = True):
+    def __init__(
+        self, feat_ext: FeatureExtractor, num_feat: int, lastonly: bool = True
+    ):
         super(SiameseTuning, self).__init__()
         self.feat_ext = feat_ext()
-        if not hasattr(self.feat_ext, 'features'):
-            raise NotImplementedError('The provided feature extractor needs to provide a features() method')
+        if not hasattr(self.feat_ext, "features"):
+            raise NotImplementedError(
+                "The provided feature extractor needs to provide a features() method"
+            )
         self.lastonly = lastonly
         self.classifier = nn.Sequential(
             nn.BatchNorm1d(num_features=num_feat),
@@ -232,14 +254,20 @@ class SiameseTuning(FeatureExtractor):
 
 class EfficientNetB4ST(SiameseTuning):
     def __init__(self):
-        super(EfficientNetB4ST, self).__init__(feat_ext=EfficientNetB4, num_feat=1792, lastonly=True)
+        super(EfficientNetB4ST, self).__init__(
+            feat_ext=EfficientNetB4, num_feat=1792, lastonly=True
+        )
 
 
 class EfficientNetAutoAttB4ST(SiameseTuning):
     def __init__(self):
-        super(EfficientNetAutoAttB4ST, self).__init__(feat_ext=EfficientNetAutoAttB4, num_feat=1792, lastonly=True)
+        super(EfficientNetAutoAttB4ST, self).__init__(
+            feat_ext=EfficientNetAutoAttB4, num_feat=1792, lastonly=True
+        )
 
 
 class XceptionST(SiameseTuning):
     def __init__(self):
-        super(XceptionST, self).__init__(feat_ext=Xception, num_feat=2048, lastonly=True)
+        super(XceptionST, self).__init__(
+            feat_ext=Xception, num_feat=2048, lastonly=True
+        )

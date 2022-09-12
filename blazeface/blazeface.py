@@ -13,7 +13,7 @@ class BlazeBlock(nn.Module):
         self.stride = stride
         self.channel_pad = out_channels - in_channels
 
-        # TFLite uses slightly different padding than PyTorch 
+        # TFLite uses slightly different padding than PyTorch
         # on the depthwise conv layer when the stride is 2.
         if stride == 2:
             self.max_pool = nn.MaxPool2d(kernel_size=stride, stride=stride)
@@ -22,11 +22,23 @@ class BlazeBlock(nn.Module):
             padding = (kernel_size - 1) // 2
 
         self.convs = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
-                      kernel_size=kernel_size, stride=stride, padding=padding,
-                      groups=in_channels, bias=True),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
-                      kernel_size=1, stride=1, padding=0, bias=True),
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=in_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+                groups=in_channels,
+                bias=True,
+            ),
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=True,
+            ),
         )
 
         self.act = nn.ReLU(inplace=True)
@@ -46,15 +58,15 @@ class BlazeBlock(nn.Module):
 
 class BlazeFace(nn.Module):
     """The BlazeFace face detection model from MediaPipe.
-    
-    The version from MediaPipe is simpler than the one in the paper; 
+
+    The version from MediaPipe is simpler than the one in the paper;
     it does not use the "double" BlazeBlocks.
 
     Because we won't be training this model, it doesn't need to have
-    batchnorm layers. These have already been "folded" into the conv 
+    batchnorm layers. These have already been "folded" into the conv
     weights by TFLite.
 
-    The conversion to PyTorch is fairly straightforward, but there are 
+    The conversion to PyTorch is fairly straightforward, but there are
     some small differences between TFLite and PyTorch in how they handle
     padding on conv layers with stride 2.
 
@@ -64,12 +76,27 @@ class BlazeFace(nn.Module):
     Based on code from https://github.com/tkat0/PyTorch_BlazeFace/ and
     https://github.com/google/mediapipe/
     """
+
     input_size = (128, 128)
 
     detection_keys = [
-        'ymin', 'xmin', 'ymax', 'xmax',
-        'kp1x', 'kp1y', 'kp2x', 'kp2y', 'kp3x', 'kp3y', 'kp4x', 'kp4y', 'kp5x', 'kp5y', 'kp6x', 'kp6y',
-        'conf'
+        "ymin",
+        "xmin",
+        "ymax",
+        "xmax",
+        "kp1x",
+        "kp1y",
+        "kp2x",
+        "kp2y",
+        "kp3x",
+        "kp3y",
+        "kp4x",
+        "kp4y",
+        "kp5x",
+        "kp5y",
+        "kp6x",
+        "kp6y",
+        "conf",
     ]
 
     def __init__(self):
@@ -92,9 +119,15 @@ class BlazeFace(nn.Module):
 
     def _define_layers(self):
         self.backbone1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=24, kernel_size=5, stride=2, padding=0, bias=True),
+            nn.Conv2d(
+                in_channels=3,
+                out_channels=24,
+                kernel_size=5,
+                stride=2,
+                padding=0,
+                bias=True,
+            ),
             nn.ReLU(inplace=True),
-
             BlazeBlock(24, 24),
             BlazeBlock(24, 28),
             BlazeBlock(28, 32, stride=2),
@@ -165,10 +198,12 @@ class BlazeFace(nn.Module):
         self.eval()
 
     def load_anchors(self, path):
-        self.anchors = torch.tensor(np.load(path), dtype=torch.float32, device=self._device())
-        assert (self.anchors.ndimension() == 2)
-        assert (self.anchors.shape[0] == self.num_anchors)
-        assert (self.anchors.shape[1] == 4)
+        self.anchors = torch.tensor(
+            np.load(path), dtype=torch.float32, device=self._device()
+        )
+        assert self.anchors.ndimension() == 2
+        assert self.anchors.shape[0] == self.num_anchors
+        assert self.anchors.shape[1] == 4
 
     def _preprocess(self, x):
         """Converts the image pixels to the range [-1, 1]."""
@@ -179,7 +214,7 @@ class BlazeFace(nn.Module):
 
         Arguments:
             img: a NumPy array of shape (H, W, 3) or a PyTorch tensor of
-                 shape (3, H, W). The image's height and width should be 
+                 shape (3, H, W). The image's height and width should be
                  128 pixels.
 
         Returns:
@@ -190,7 +225,9 @@ class BlazeFace(nn.Module):
 
         return self.predict_on_batch(img.unsqueeze(0))[0]
 
-    def predict_on_batch(self, x: np.ndarray or torch.Tensor, apply_nms: bool = True) -> List[torch.Tensor]:
+    def predict_on_batch(
+        self, x: np.ndarray or torch.Tensor, apply_nms: bool = True
+    ) -> List[torch.Tensor]:
         """Makes a prediction on a batch of images.
 
         Arguments:
@@ -199,7 +236,7 @@ class BlazeFace(nn.Module):
             apply_nms: pass False to not apply non-max suppression
 
         Returns:
-            A list containing a tensor of face detections for each image in 
+            A list containing a tensor of face detections for each image in
             the batch. If no faces are found for an image, returns a tensor
             of shape (0, 17).
 
@@ -234,15 +271,20 @@ class BlazeFace(nn.Module):
         filtered_detections = []
         for i in range(len(detections)):
             faces = self._weighted_non_max_suppression(detections[i])
-            faces = torch.stack(faces) if len(faces) > 0 else torch.zeros((0, 17), device=self._device())
+            faces = (
+                torch.stack(faces)
+                if len(faces) > 0
+                else torch.zeros((0, 17), device=self._device())
+            )
             filtered_detections.append(faces)
 
         return filtered_detections
 
-    def _tensors_to_detections(self, raw_box_tensor: torch.Tensor, raw_score_tensor: torch.Tensor, anchors) -> List[
-        torch.Tensor]:
+    def _tensors_to_detections(
+        self, raw_box_tensor: torch.Tensor, raw_score_tensor: torch.Tensor, anchors
+    ) -> List[torch.Tensor]:
         """The output of the neural network is a tensor of shape (b, 896, 16)
-        containing the bounding box regressor predictions, as well as a tensor 
+        containing the bounding box regressor predictions, as well as a tensor
         of shape (b, 896, 1) with the classification confidences.
 
         This function converts these two "raw" tensors into proper detections.
@@ -296,15 +338,20 @@ class BlazeFace(nn.Module):
         w = raw_boxes[..., 2] / self.w_scale * anchors[:, 2]
         h = raw_boxes[..., 3] / self.h_scale * anchors[:, 3]
 
-        boxes[..., 0] = y_center - h / 2.  # ymin
-        boxes[..., 1] = x_center - w / 2.  # xmin
-        boxes[..., 2] = y_center + h / 2.  # ymax
-        boxes[..., 3] = x_center + w / 2.  # xmax
+        boxes[..., 0] = y_center - h / 2.0  # ymin
+        boxes[..., 1] = x_center - w / 2.0  # xmin
+        boxes[..., 2] = y_center + h / 2.0  # ymax
+        boxes[..., 3] = x_center + w / 2.0  # xmax
 
         for k in range(6):
             offset = 4 + k * 2
-            keypoint_x = raw_boxes[..., offset] / self.x_scale * anchors[:, 2] + anchors[:, 0]
-            keypoint_y = raw_boxes[..., offset + 1] / self.y_scale * anchors[:, 3] + anchors[:, 1]
+            keypoint_x = (
+                raw_boxes[..., offset] / self.x_scale * anchors[:, 2] + anchors[:, 0]
+            )
+            keypoint_y = (
+                raw_boxes[..., offset + 1] / self.y_scale * anchors[:, 3]
+                + anchors[:, 1]
+            )
             boxes[..., offset] = keypoint_x
             boxes[..., offset + 1] = keypoint_y
 
@@ -324,12 +371,13 @@ class BlazeFace(nn.Module):
         The input detections should be a Tensor of shape (count, 17).
 
         Returns a list of PyTorch tensors, one for each detected face.
-        
+
         This is based on the source code from:
         mediapipe/calculators/util/non_max_suppression_calculator.cc
         mediapipe/calculators/util/non_max_suppression_calculator.proto
         """
-        if len(detections) == 0: return []
+        if len(detections) == 0:
+            return []
 
         output_detections = []
 
@@ -339,7 +387,7 @@ class BlazeFace(nn.Module):
         while len(remaining) > 0:
             detection = detections[remaining[0]]
 
-            # Compute the overlap between the first box and the other 
+            # Compute the overlap between the first box and the other
             # remaining boxes. (Note that the other_boxes also include
             # the first_box.)
             first_box = detection[:4]
@@ -371,7 +419,7 @@ class BlazeFace(nn.Module):
 
 
 def intersect(box_a, box_b):
-    """ We resize both tensors to [A,B,2] without new malloc:
+    """We resize both tensors to [A,B,2] without new malloc:
     [A,2] -> [A,1,2] -> [A,B,2]
     [B,2] -> [1,B,2] -> [A,B,2]
     Then we compute the area of intersect between box_a and box_b.
@@ -383,10 +431,14 @@ def intersect(box_a, box_b):
     """
     A = box_a.size(0)
     B = box_b.size(0)
-    max_xy = torch.min(box_a[:, 2:].unsqueeze(1).expand(A, B, 2),
-                       box_b[:, 2:].unsqueeze(0).expand(A, B, 2))
-    min_xy = torch.max(box_a[:, :2].unsqueeze(1).expand(A, B, 2),
-                       box_b[:, :2].unsqueeze(0).expand(A, B, 2))
+    max_xy = torch.min(
+        box_a[:, 2:].unsqueeze(1).expand(A, B, 2),
+        box_b[:, 2:].unsqueeze(0).expand(A, B, 2),
+    )
+    min_xy = torch.max(
+        box_a[:, :2].unsqueeze(1).expand(A, B, 2),
+        box_b[:, :2].unsqueeze(0).expand(A, B, 2),
+    )
     inter = torch.clamp((max_xy - min_xy), min=0)
     return inter[:, :, 0] * inter[:, :, 1]
 
@@ -404,10 +456,16 @@ def jaccard(box_a, box_b):
         jaccard overlap: (tensor) Shape: [box_a.size(0), box_b.size(0)]
     """
     inter = intersect(box_a, box_b)
-    area_a = ((box_a[:, 2] - box_a[:, 0]) *
-              (box_a[:, 3] - box_a[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
-    area_b = ((box_b[:, 2] - box_b[:, 0]) *
-              (box_b[:, 3] - box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
+    area_a = (
+        ((box_a[:, 2] - box_a[:, 0]) * (box_a[:, 3] - box_a[:, 1]))
+        .unsqueeze(1)
+        .expand_as(inter)
+    )  # [A,B]
+    area_b = (
+        ((box_b[:, 2] - box_b[:, 0]) * (box_b[:, 3] - box_b[:, 1]))
+        .unsqueeze(0)
+        .expand_as(inter)
+    )  # [A,B]
     union = area_a + area_b - inter
     return inter / union  # [A,B]
 

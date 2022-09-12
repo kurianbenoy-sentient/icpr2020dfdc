@@ -19,15 +19,16 @@ from .data import FrameFaceIterableDataset, get_iterative_real_fake_idxs
 
 
 class FrameFaceTripletIterableDataset(FrameFaceIterableDataset):
-
-    def __init__(self,
-                 roots: List[str],
-                 dfs: List[pd.DataFrame],
-                 size: int,
-                 scale: str,
-                 num_triplets: int = -1,
-                 transformer: A.BasicTransform = ToTensorV2(),
-                 seed: int = None):
+    def __init__(
+        self,
+        roots: List[str],
+        dfs: List[pd.DataFrame],
+        size: int,
+        scale: str,
+        num_triplets: int = -1,
+        transformer: A.BasicTransform = ToTensorV2(),
+        seed: int = None,
+    ):
         """
 
         :param roots: List of root folders for frames cache
@@ -48,7 +49,7 @@ class FrameFaceTripletIterableDataset(FrameFaceIterableDataset):
             scale=scale,
             num_samples=num_triplets * 3,
             transformer=transformer,
-            seed=seed
+            seed=seed,
         )
 
         self.num_triplet_couples = self.num_samples // 6
@@ -63,7 +64,7 @@ class FrameFaceTripletIterableDataset(FrameFaceIterableDataset):
             df_real=self.df_real,
             df_fake=self.df_fake,
             num_samples=self.num_samples,
-            seed0=self.seed0
+            seed0=self.seed0,
         )
 
         while len(random_fake_idxs) >= 3 and len(random_real_idxs) >= 3:

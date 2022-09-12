@@ -12,7 +12,7 @@ from blazeface import BlazeFace
 class FaceExtractor:
     """Wrapper for face extraction workflow."""
 
-    def __init__(self, video_read_fn = None, facedet: BlazeFace = None):
+    def __init__(self, video_read_fn=None, facedet: BlazeFace = None):
         """Creates a new FaceExtractor.
 
         Arguments:
@@ -25,7 +25,9 @@ class FaceExtractor:
         self.video_read_fn = video_read_fn
         self.facedet = facedet
 
-    def process_image(self, path: str = None, img: Image.Image or np.ndarray = None) -> dict:
+    def process_image(
+        self, path: str = None, img: Image.Image or np.ndarray = None
+    ) -> dict:
         """
         Process a single image
         :param path: Path to the image
@@ -34,9 +36,11 @@ class FaceExtractor:
         """
 
         if img is not None and path is not None:
-            raise ValueError('Only one argument between path and img can be specified')
+            raise ValueError("Only one argument between path and img can be specified")
         if img is None and path is None:
-            raise ValueError('At least one argument between path and img must be specified')
+            raise ValueError(
+                "At least one argument between path and img must be specified"
+            )
 
         target_size = self.facedet.input_size
 
@@ -69,19 +73,22 @@ class FaceExtractor:
         detections = self.facedet.nms(detections)
 
         # Crop the faces out of the original frame.
-        frameref_detections = self._add_margin_to_detections(detections[0], frame_size, 0.2)
+        frameref_detections = self._add_margin_to_detections(
+            detections[0], frame_size, 0.2
+        )
         faces = self._crop_faces(img, frameref_detections)
         kpts = self._crop_kpts(img, detections[0], 0.3)
 
         # Add additional information about the frame and detections.
         scores = list(detections[0][:, 16].cpu().numpy())
-        frame_dict = {"frame_w": frame_size[0],
-                      "frame_h": frame_size[1],
-                      "faces": faces,
-                      "kpts": kpts,
-                      "detections": frameref_detections.cpu().numpy(),
-                      "scores": scores,
-                      }
+        frame_dict = {
+            "frame_w": frame_size[0],
+            "frame_h": frame_size[1],
+            "faces": faces,
+            "kpts": kpts,
+            "detections": frameref_detections.cpu().numpy(),
+            "scores": scores,
+        }
 
         # Sort faces by descending confidence
         frame_dict = self._soft_faces_by_descending_score(frame_dict)
@@ -89,16 +96,16 @@ class FaceExtractor:
         return frame_dict
 
     def _soft_faces_by_descending_score(self, frame_dict: dict) -> dict:
-        if len(frame_dict['scores']) > 1:
-            sort_idxs = np.argsort(frame_dict['scores'])[::-1]
-            new_faces = [frame_dict['faces'][i] for i in sort_idxs]
-            new_kpts = [frame_dict['kpts'][i] for i in sort_idxs]
-            new_detections = frame_dict['detections'][sort_idxs]
-            new_scores = [frame_dict['scores'][i] for i in sort_idxs]
-            frame_dict['faces'] = new_faces
-            frame_dict['kpts'] = new_kpts
-            frame_dict['detections'] = new_detections
-            frame_dict['scores'] = new_scores
+        if len(frame_dict["scores"]) > 1:
+            sort_idxs = np.argsort(frame_dict["scores"])[::-1]
+            new_faces = [frame_dict["faces"][i] for i in sort_idxs]
+            new_kpts = [frame_dict["kpts"][i] for i in sort_idxs]
+            new_detections = frame_dict["detections"][sort_idxs]
+            new_scores = [frame_dict["scores"][i] for i in sort_idxs]
+            frame_dict["faces"] = new_faces
+            frame_dict["kpts"] = new_kpts
+            frame_dict["detections"] = new_detections
+            frame_dict["scores"] = new_scores
         return frame_dict
 
     def process_videos(self, input_dir, filenames, video_idxs) -> List[dict]:
@@ -145,7 +152,8 @@ class FaceExtractor:
             result = self.video_read_fn(video_path)
 
             # Error? Then skip this video.
-            if result is None: continue
+            if result is None:
+                continue
 
             videos_read.append(video_idx)
 
@@ -175,11 +183,13 @@ class FaceExtractor:
             # Not all videos may have the same number of tiles, so find which
             # detections go with which video.
             num_tiles = tiles[v].shape[0]
-            detections = all_detections[offs:offs + num_tiles]
+            detections = all_detections[offs : offs + num_tiles]
             offs += num_tiles
 
             # Convert the detections from 128x128 back to the original frame size.
-            detections = self._resize_detections(detections, target_size, resize_info[v])
+            detections = self._resize_detections(
+                detections, target_size, resize_info[v]
+            )
 
             # Because we have several tiles for each frame, combine the predictions
             # from these tiles. The result is a list of PyTorch tensors, but now one
@@ -194,22 +204,25 @@ class FaceExtractor:
 
             for i in range(len(detections)):
                 # Crop the faces out of the original frame.
-                frameref_detections = self._add_margin_to_detections(detections[i], frame_size, 0.2)
+                frameref_detections = self._add_margin_to_detections(
+                    detections[i], frame_size, 0.2
+                )
                 faces = self._crop_faces(frames[v][i], frameref_detections)
                 kpts = self._crop_kpts(frames[v][i], detections[i], 0.3)
 
                 # Add additional information about the frame and detections.
                 scores = list(detections[i][:, 16].cpu().numpy())
-                frame_dict = {"video_idx": videos_read[v],
-                              "frame_idx": frames_read[v][i],
-                              "frame_w": frame_size[0],
-                              "frame_h": frame_size[1],
-                              "frame": frames[v][i],
-                              "faces": faces,
-                              "kpts": kpts,
-                              "detections": frameref_detections.cpu().numpy(),
-                              "scores": scores,
-                              }
+                frame_dict = {
+                    "video_idx": videos_read[v],
+                    "frame_idx": frames_read[v][i],
+                    "frame_w": frame_size[0],
+                    "frame_h": frame_size[1],
+                    "frame": frames[v][i],
+                    "faces": faces,
+                    "kpts": kpts,
+                    "detections": frameref_detections.cpu().numpy(),
+                    "scores": scores,
+                }
                 # Sort faces by descending confidence
                 frame_dict = self._soft_faces_by_descending_score(frame_dict)
 
@@ -223,7 +236,9 @@ class FaceExtractor:
         filenames = [os.path.basename(video_path)]
         return self.process_videos(input_dir, filenames, [0])
 
-    def _tile_frames(self, frames: np.ndarray, target_size: Tuple[int, int]) -> (np.ndarray, List[float]):
+    def _tile_frames(
+        self, frames: np.ndarray, target_size: Tuple[int, int]
+    ) -> (np.ndarray, List[float]):
         """Splits each frame into several smaller, partially overlapping tiles
         and resizes each tile to target_size.
 
@@ -259,7 +274,10 @@ class FaceExtractor:
 
         num_h, num_v, split_size, x_step, y_step = self.get_tiles_params(H, W)
 
-        splits = np.zeros((num_frames * num_v * num_h, target_size[1], target_size[0], 3), dtype=np.uint8)
+        splits = np.zeros(
+            (num_frames * num_v * num_h, target_size[1], target_size[0], 3),
+            dtype=np.uint8,
+        )
 
         i = 0
         for f in range(num_frames):
@@ -267,8 +285,10 @@ class FaceExtractor:
             for v in range(num_v):
                 x = 0
                 for h in range(num_h):
-                    crop = frames[f, y:y + split_size, x:x + split_size, :]
-                    splits[i] = cv2.resize(crop, target_size, interpolation=cv2.INTER_AREA)
+                    crop = frames[f, y : y + split_size, x : x + split_size, :]
+                    splits[i] = cv2.resize(
+                        crop, target_size, interpolation=cv2.INTER_AREA
+                    )
                     x += x_step
                     i += 1
                 y += y_step
@@ -302,20 +322,32 @@ class FaceExtractor:
 
             # ymin, xmin, ymax, xmax
             for k in range(2):
-                detection[:, k * 2] = (detection[:, k * 2] * target_h - offset_y) * scale_h
-                detection[:, k * 2 + 1] = (detection[:, k * 2 + 1] * target_w - offset_x) * scale_w
+                detection[:, k * 2] = (
+                    detection[:, k * 2] * target_h - offset_y
+                ) * scale_h
+                detection[:, k * 2 + 1] = (
+                    detection[:, k * 2 + 1] * target_w - offset_x
+                ) * scale_w
 
             # keypoints are x,y
             for k in range(2, 8):
-                detection[:, k * 2] = (detection[:, k * 2] * target_w - offset_x) * scale_w
-                detection[:, k * 2 + 1] = (detection[:, k * 2 + 1] * target_h - offset_y) * scale_h
+                detection[:, k * 2] = (
+                    detection[:, k * 2] * target_w - offset_x
+                ) * scale_w
+                detection[:, k * 2 + 1] = (
+                    detection[:, k * 2 + 1] * target_h - offset_y
+                ) * scale_h
 
             projected.append(detection)
 
         return projected
 
-    def _untile_detections(self, num_frames: int, frame_size: Tuple[int, int], detections: List[torch.Tensor]) -> List[
-        torch.Tensor]:
+    def _untile_detections(
+        self,
+        num_frames: int,
+        frame_size: Tuple[int, int],
+        detections: List[torch.Tensor],
+    ) -> List[torch.Tensor]:
         """With N tiles per frame, there also are N times as many detections.
         This function groups together the detections for a given frame; it is
         the complement to tile_frames().
@@ -352,8 +384,9 @@ class FaceExtractor:
 
         return combined_detections
 
-    def _add_margin_to_detections(self, detections: torch.Tensor, frame_size: Tuple[int, int],
-                                  margin: float = 0.2) -> torch.Tensor:
+    def _add_margin_to_detections(
+        self, detections: torch.Tensor, frame_size: Tuple[int, int], margin: float = 0.2
+    ) -> torch.Tensor:
         """Expands the face bounding box.
 
         NOTE: The face detections often do not include the forehead, which
@@ -370,11 +403,17 @@ class FaceExtractor:
         detections = detections.clone()
         detections[:, 0] = torch.clamp(detections[:, 0] - offset * 2, min=0)  # ymin
         detections[:, 1] = torch.clamp(detections[:, 1] - offset, min=0)  # xmin
-        detections[:, 2] = torch.clamp(detections[:, 2] + offset, max=frame_size[1])  # ymax
-        detections[:, 3] = torch.clamp(detections[:, 3] + offset, max=frame_size[0])  # xmax
+        detections[:, 2] = torch.clamp(
+            detections[:, 2] + offset, max=frame_size[1]
+        )  # ymax
+        detections[:, 3] = torch.clamp(
+            detections[:, 3] + offset, max=frame_size[0]
+        )  # xmax
         return detections
 
-    def _crop_faces(self, frame: np.ndarray, detections: torch.Tensor) -> List[np.ndarray]:
+    def _crop_faces(
+        self, frame: np.ndarray, detections: torch.Tensor
+    ) -> List[np.ndarray]:
         """Copies the face region(s) from the given frame into a set
         of new NumPy arrays.
 
@@ -392,7 +431,9 @@ class FaceExtractor:
             faces.append(face)
         return faces
 
-    def _crop_kpts(self, frame: np.ndarray, detections: torch.Tensor, face_fraction: float):
+    def _crop_kpts(
+        self, frame: np.ndarray, detections: torch.Tensor, face_fraction: float
+    ):
         """Copies the parts region(s) from the given frame into a set
         of new NumPy arrays.
 
@@ -407,11 +448,20 @@ class FaceExtractor:
         faces = []
         for i in range(len(detections)):
             kpts = []
-            size = int(face_fraction * min(detections[i, 2] - detections[i, 0], detections[i, 3] - detections[i, 1]))
+            size = int(
+                face_fraction
+                * min(
+                    detections[i, 2] - detections[i, 0],
+                    detections[i, 3] - detections[i, 1],
+                )
+            )
             kpts_coords = detections[i, 4:16].cpu().numpy().astype(np.int)
             for kpidx in range(6):
-                kpx, kpy = kpts_coords[kpidx * 2:kpidx * 2 + 2]
-                kpt = frame[kpy - size // 2:kpy - size // 2 + size, kpx - size // 2:kpx - size // 2 + size, ]
+                kpx, kpy = kpts_coords[kpidx * 2 : kpidx * 2 + 2]
+                kpt = frame[
+                    kpy - size // 2 : kpy - size // 2 + size,
+                    kpx - size // 2 : kpx - size // 2 + size,
+                ]
                 kpts.append(kpt)
             faces.append(kpts)
         return faces

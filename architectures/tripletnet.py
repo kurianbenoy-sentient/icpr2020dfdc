@@ -21,8 +21,10 @@ class TripletNet(FeatureExtractor):
     def __init__(self, feat_ext: FeatureExtractor):
         super(TripletNet, self).__init__()
         self.feat_ext = feat_ext()
-        if not hasattr(self.feat_ext, 'features'):
-            raise NotImplementedError('The provided feature extractor needs to provide a features() method')
+        if not hasattr(self.feat_ext, "features"):
+            raise NotImplementedError(
+                "The provided feature extractor needs to provide a features() method"
+            )
 
     def features(self, x):
         return self.feat_ext.features(x)
@@ -41,4 +43,6 @@ class EfficientNetB4(TripletNet):
 
 class EfficientNetAutoAttB4(TripletNet):
     def __init__(self):
-        super(EfficientNetAutoAttB4, self).__init__(feat_ext=fornet.EfficientNetAutoAttB4)
+        super(EfficientNetAutoAttB4, self).__init__(
+            feat_ext=fornet.EfficientNetAutoAttB4
+        )
