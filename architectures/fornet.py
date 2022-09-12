@@ -9,6 +9,7 @@ Sara Mandelli
 Luca Bondi
 Paolo Bestagini
 """
+import os
 from collections import OrderedDict
 
 import torch
@@ -23,6 +24,7 @@ from . import externals
 Feature Extractor
 """
 
+model_dir = os.environ.get("MODEL_DIR")
 
 class FeatureExtractor(nn.Module):
     """
@@ -49,7 +51,6 @@ EfficientNet
 class EfficientNetGen(FeatureExtractor):
     def __init__(self, model: str):
         super(EfficientNetGen, self).__init__()
-
         self.efficientnet = EfficientNet.from_pretrained(model)
         self.classifier = nn.Linear(self.efficientnet._conv_head.out_channels, 1)
         del self.efficientnet._fc
@@ -144,8 +145,7 @@ class EfficientNetAutoAtt(EfficientNet):
 class EfficientNetGenAutoAtt(FeatureExtractor):
     def __init__(self, model: str, width: int):
         super(EfficientNetGenAutoAtt, self).__init__()
-
-        self.efficientnet = EfficientNetAutoAtt.from_pretrained(model)
+        self.efficientnet = EfficientNetAutoAtt.from_pretrained(model, weights_path=os.path.join(model_dir,"efficientnet-b4-6ed6700e.pth"))
         self.efficientnet.init_att(model, width)
         self.classifier = nn.Linear(self.efficientnet._conv_head.out_channels, 1)
         del self.efficientnet._fc
