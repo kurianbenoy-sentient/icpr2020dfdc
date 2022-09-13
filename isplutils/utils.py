@@ -19,7 +19,7 @@ import scipy
 import torch
 from PIL import Image
 from albumentations.pytorch import ToTensorV2
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 from torch import nn as nn
 from torchvision import transforms
 

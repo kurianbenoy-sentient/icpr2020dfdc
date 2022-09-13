@@ -21,7 +21,7 @@ from PIL import Image
 
 from blazeface import FaceExtractor, BlazeFace
 from architectures import fornet
-from isplutils import utils
+from isplutils.utils import get_transformer
 
 model_dir = os.environ.get("MODEL_DIR")
 
@@ -42,7 +42,7 @@ class Deepfakedetector:  # pylint: disable=too-few-public-methods
         self.net = getattr(fornet, net_model)().eval().to(self.device)
         self.net.load_state_dict(torch.load(MODEL_PATH, map_location=self.device))
 
-        self.transf = utils.get_transformer(
+        self.transf = get_transformer(
             face_policy, face_size, self.net.get_normalizer(), train=False
         )
         facedet = BlazeFace().to(self.device)
